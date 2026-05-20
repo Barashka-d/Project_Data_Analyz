@@ -1,0 +1,174 @@
+---
+title: "Dostredivé zrýchlenie"
+author: "Dmytro Donetskyi"
+format: 
+  html: default
+  pdf: default
+editor: visual
+bibliography: sources.bib
+---
+
+## Dostredivé zrýchlenie
+
+### Úvod
+
+Kruhový pohyb telies je jedným zo základných druhov pohybu vo fyzike, s ktorým sa stretávame nielen v technike, ale aj v bežnom živote. Príkladom môže byť pohyb automobilu v zákrute, otáčanie Zeme okolo svojej osi alebo pohyb planét okolo Slnka.
+
+Počas takéhoto pohybu dochádza k zmene smeru rýchlosti, hoci jej veľkosť môže zostať konštantná. Táto zmena smeru znamená, že teleso má zrýchlenie, ktoré nazývame @wiki2025 (dostredivé zrýchlenie).
+
+Cieľom tejto práce je analýza podstaty centripetálneho zrýchlenia, odvodenie jeho matematického výrazu a demonštrácia v reálnom živote pomocou experimentu s využitím programu @phyphox.
+
+### Teoretické pozadie
+
+Pri rovnomernom pohybe po kružnici sa veľkosť rýchlosti telesa nemení, mení sa však jej smer. Táto zmena smeru spôsobuje vznik zrýchlenia orientovaného do stredu kružnice, ktoré nazývame dostredivé (centripetálne) zrýchlenie.
+
+Veľkosť dostredivého zrýchlenia je daná vzťahom:
+
+$$
+a_c = \frac{v^2}{r}
+$$
+
+kde $a_c$ je dostredivé zrýchlenie, $v$ je rýchlosť telesa a $r$ je polomer kružnice.
+
+Rýchlosť telesa môžeme vyjadriť pomocou uhlovej rýchlosti $\omega$:
+
+$$
+v = \omega r
+$$
+
+Dosadením do predchádzajúceho vzťahu získame:
+
+$$
+a_c = \omega^2 r
+$$ {#eq-centripetal}
+
+Uhlová rýchlosť je definovaná ako:
+
+$$
+\omega = \frac{2\pi}{T}
+$$
+
+kde $T$ je perióda pohybu.
+
+Zo vzťahu @eq-centripetal vyplýva, že dostredivé zrýchlenie je priamo úmerné druhej mocnine uhlovej rýchlosti a polomeru kružnice. Pri nulovej uhlovej rýchlosti je dostredivé zrýchlenie nulové, čo zodpovedá fyzikálnemu modelu pohybu.
+
+## Experiment
+
+### Úvod
+
+Experiment bol realizovaný na detskom kolotoči (kruhovom pohyblivom zariadení). Na meranie fyzikálnych veličín bol použitý mobilný telefón s aplikáciou @phyphox, ktorá umožňuje zaznamenávať pohybové dáta pomocou vstavaných senzorov.
+
+Počas experimentu boli merané: čas $t$, uhlová rýchlosť $\omega$, dostredivé zrýchlenie $a_c$.
+
+Získané údaje boli exportované vo forme tabuľky a následne spracované v prostredí R.
+
+Na základe teoretického vzťahu pre dostredivé zrýchlenie:
+
+$$
+a_c = \omega^2 r
+$$
+
+predpokladáme, že medzi $a_c$ a $\omega$ existuje kvadratická závislosť.
+
+Cieľom analýzy je: vizualizovať namerané dáta, nájsť vhodný matematický model popisujúci závislosť $a_c$ od $\omega$, pomocou lineárnej regresie určiť parameter $r$, ktorý predstavuje polomer kružnice.
+
+Následne bude vykonaná regresná analýza a výsledný model bude porovnaný s experimentálnymi dátami pomocou grafickej vizualizácie.
+
+### Spracovanie dát
+
+Najprv pripojíme všetky potrebné knižnice:
+
+```{r}
+library(readxl)
+library(ggplot2)
+library(dplyr)
+```
+
+Importujeme údaje, ktoré sme získali z programu, vo forme tabuľky v programe Excel. Pre väčšiu prehľadnosť premenujeme stĺpce a priradíme ich k samostatným premenným:
+
+```{r}
+data <- read_excel("data.xls")
+colnames(data) <- c("time", "omega", "a")
+
+omega <- data$`omega`
+a <- data$`a`
+time <- data$`time`
+```
+
+Ďalej bude použitá transformácia $\omega^2$, čím sa vzťah @eq-centripetal prevedie na lineárny tvar:
+
+```{r}
+omega2 <- omega^2
+
+model <- lm(a ~ 0 + omega2, data = data)
+
+r <- coef(model)[1]
+```
+
+Vďaka tomuto modelu sme zistili polomer $r=0.943$. Dosiahli sme dobrý výsledok. Telefón nebol pripevnený k okraju kolotoča, ale k sedadlu, a preto sa skutočný polomer merania líši od polomeru kolotoča, takže môžeme konštatovať, že polomer kolotoča bol približne 1 meter.
+
+#### Tabuľka nameraných hodnôt
+
+V tabuľke @tbl-data sú uvedené namerané hodnoty získané počas experimentu, ktoré tvoria základ pre následnú regresnú analýzu.
+
+```{r}
+#| label: tbl-data
+#| tbl-cap: "Namerané hodnoty"
+data %>%
+  select(time, omega, a) %>%
+  mutate(
+    omega = round(omega, 2),
+    a = round(a, 2)
+  )
+```
+
+#### Grafy
+
+Teraz vytvoríme graf našich meraní a matematického modelu a potom ich porovnáme:
+
+```{r}
+#| label: fig-data
+#| fig-cap: "Experimentálne dáta"
+ggplot(data, aes(x = omega, y = a)) +
+  geom_point(color = "red") +
+  labs(
+    title = "Experimentálne dáta",
+    x = "ω",
+    y = "a"
+  )
+```
+
+```{r}
+#| label: fig-combined
+#| fig-cap: "Porovnanie dát a modelu"
+ggplot(data, aes(x = omega, y = a)) +
+  geom_point(color = "red", ) +
+  stat_function(fun = function(x) r*x^2,
+                color = "black",
+                alpha = 0.5,
+                linewidth = 1.1) +
+  labs(
+    title = "Porovnanie dát a modelu",
+    x = "ω",
+    y = "a"
+  )
+
+```
+
+### Interpretácia výsledkov
+
+Z grafu @fig-combined môžeme pozorovať, že na začiatku a na konci merania sa experimentálne dáta veľmi dobre zhodujú s matematickým modelom. V strednej časti grafu je však viditeľný väčší rozptyl nameraných hodnôt.
+
+Tento rozptyl mohol byť spôsobený viacerými faktormi, napríklad obmedzenou presnosťou senzorov mobilného telefónu, nerovnomerným pohybom kolotoča alebo vonkajšími zásahmi pri jeho roztočení.
+
+Presnú príčinu nie je možné jednoznačne určiť, pravdepodobne ide o kombináciu viacerých vplyvov. Napriek tomu možno konštatovať, že experimentálne dáta vo všeobecnosti dobre zodpovedajú teoretickému modelu definovanému vzťahom @eq-centripetal, čo potvrdzuje správnosť použitého fyzikálneho modelu.
+
+## Záver
+
+Cieľom práce bolo experimentálne overiť závislosť dostredivého zrýchlenia od uhlovej rýchlosti pri rovnomernom pohybe po kružnici. Na základe spracovania nameraných dát a regresnej analýzy sa potvrdilo, že dostredivé zrýchlenie je priamo úmerné druhej mocnine uhlovej rýchlosti.
+
+Získaný matematický model dobre opisuje experimentálne dáta a umožnil určiť odhad polomeru kružnice. Napriek menším odchýlkam v meraniach možno konštatovať, že výsledky sú v súlade s teoretickými predpokladmi.
+
+Experiment tak potvrdil platnosť vzťahu pre dostredivé zrýchlenie a ukázal možnosti využitia moderných technológií pri fyzikálnych meraniach.
+
+## Literatúra
